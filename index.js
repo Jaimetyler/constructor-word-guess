@@ -1,96 +1,138 @@
-var word = require("./word");
-var random = require("./randomwords")
+
+var Word = require("./Word.js");
 var inquirer = require("inquirer");
 
+ //make an array that has all possible guesses(letters)//
+var letterArray = "abcdefghijklmnopqrstuvwxyz";
 
-console.log("Lets Play");
-console.log("\nWelcome to CLI-Hangman!");
-// console.log(word.wordDisplay().join(' '));
-console.log('You have: '+ numberOfGuesses+ ' guesses remaining. \n');
-// guessLetter();
+ //make an array that has all of the random words to be guessed// 
+ var words = [
+    "potatoe", "sushi", "cake", "brownie", "broccoli", "squash", "onion", "tomatoe", "soup", "cracker", 
+    "hotdog", "hamburger", "salad"
+]
+ //make a 
+var randomWord = Math.floor(Math.random() * words.length);
+var gameWord     = words[randomWord];
 
-//variable to use for the randomWord generated//
-//variable for number of guesses the user will have //
-// variable to store user's guesses //
-var guessedLetters = [];
-var word = randomWord();
-var numberOfGuesses = 5;
+ //pass the randomWord to the Word.js constructor
+var selectedWord = new Word(gameWord);
+var requireNewWord = false;
 
-var question = [{
-    type: 'input',
-    name: 'guessedLetter',
-    message: 'Guess a letter!',
-    validate: function (input) {
-        if ((input.length === 1) && !(Number(input))) {
-            return true;
-        } else {
-            console.log('\n')
-            return false;
-        }
+ //make two varriables to hold right and wrong guesses
+ var correctLetters = [];
+
+var incorrectLetters = [];
+
+
+ //make a variable to keep track of the number of guesses
+var guessesLeft = 7;
+
+ // make a function that chooses the word for the user to guess
+function game(){
+    if (requireNewWord) {
+        var randomWord = Math.floor(Math.random() * words.length);
+        var gameWord = words[randomWord];
+        
+
+         selectedWord = new Word (gameWord);
+        requireNewWord = false;
     }
-}]
 
-function guessLetter() {
-    inquirer.prompt(question).then(function (response) {
-        if (guessedLetters.includes(response.guessedLetter)) {
-            console.log('---------------------------------------------------')
-            console.log('You already guessed ' + response.guessedLetter + '!');
-            console.log('---------------------------------------------------')
-            console.log(word.wordDisplay().join(' '));
-            console.log('You have: ' + numberOfGuesses + ' guesses remaining. \n');
-            guessLetter();
-        } else {
-            guessedLetters.push(response.guessedLetter);
-            var guess = response.guessedLetter;
-            var found = word.guess(guess);
-            var output = word.wordDisplay();
-            console.log(output.join(' '));
-            if (!found) {
-                numberOfGuesses--
+     //create an array that holds the letters of the selectedWord
+    var solution = [];
+    selectedWord.objArray.forEach(solutionCheck) // remember to create solutionCheck function 
+
+     //create an inquirer prompt for the user to pick a letter
+    if (solution.includes(false)){
+        inquirer.prompt([
+            {
+                type: "input",
+                message: "Type a letter to guess the word! Here's a hint - think about food.",
+                name: "userinput"
             }
-            if ((numberOfGuesses === 0) && (output.includes('_'))) {
-                console.log('-----------------------------------');
-                console.log('YOU LOSE!');
-                console.log('The answer was: ' + word.stringWord);
-                console.log('-----------------------------------');
-                playAgain()
-            } else if (output.includes('_')) {
-                console.log('You have: ' + numberOfGuesses + ' guesses remaining. \n');
-                guessLetter();
+
+         ]).then(function(input){
+
+             //make an if/else statement checking the users guesses
+            //if there are too many charactars in the guess ask user to try again
+            if (!letterArray.includes(input.userinput) || input.userinput.length > 1) {
+                console.log("\nHmmm.. Please try again!\n");
+                game();
             } else {
-                console.log('-------');
-                console.log('YOU WIN');
-                console.log('-------');
-                playAgain();
+                // if the users guess is repeated, throw an error 
+                if (incorrectLetters.includes(input.userinput) || correctLetters.includes(input.userinput) || input.userinput === "") {
+                console.log("\nYou already guessed that letter!\n");
+                game()
+            } else {
+                //if the users guess is original, check to see if it is in the gameword
+                var  letterCheckArray = [];
+                selectedWord.userGuess(input.userinput);
+                selectedWord.objArray.forEach(letterCheck);
+
+                 if (letterCheckArray.join("") === solution.join("")) {
+                    console.log("\NOPE!\n");
+
+                     incorrectLetters.push(input.userinput);
+                    guessesLeft--;
+                } else {
+                    console.log("\NICE!!\n");
+                    correctLetters.push(input.userinput);
+                }
+               
+                 selectedWord.log();
+
+                 //print the guesses left and letters guessed
+                console.log("Guesses Left: " + guessesLeft + "\n");
+                console.log("Letters Guessed: " + incorrectLetters.join(" ") + "\n");
+
+                 //run the game until the guesses hit 0
+                if (guessesLeft > 0){
+                    game();
+                } else {
+                    console.log("You Lost!! :( \n");
+                    restartGame();
+                }
+                function letterCheck(key) {
+                    letterCheckArray.push(key.guessed);
+                }
+              }
             }
+        });
+    } else {
+        console.log("WINNER!!!  :) \n");
+        restartGame();
+    }
+    function solutionCheck(key) {
+        solution.push(key.guessed);
+    }
+}
+
+ //create a function to restart the game
+function restartGame(){
+    //prompt user tp play again or exit the game
+    inquirer.prompt ([
+        {
+            type: "list",
+            message: "Do you want to: ",
+            choices: [
+                "play again?", 
+                "exit game?"
+            ],
+            name: "restart"
         }
-    })
-}
-
-
-//function that generates the random word // 
-function randomWord() {
-    var indexOfWord = Math.floor(Math.random() * random.length);
-    return new Word(random[indexOfWord])
-}
-
-function playAgain() {
-    inquirer.prompt([{
-        type: 'confirm',
-        name: 'gameStatus',
-        message: 'Play again?'
-    }]).then(function (response) {
-        if (response.gameStatus === true) {
-            word = randomWord();
-            numberOfGuesses = 5;
-            guessedLetters = [];
-            console.log(word.wordDisplay().join(' '));
-            console.log('You have: ' + numberOfGuesses + ' guesses remaining. \n');
-            guessLetter();
+    ])
+    .then(function(input){
+        //reset all variables to start values
+        if (input.restart === "play again?") {
+            requireNewWord = true;
+            incorrectLetters = [];
+            correctLetters = [];
+            guessesLeft= 10;
+            game();
         } else {
-            console.log('-------------------');
-            console.log('Thanks for playing!');
-            console.log('-------------------');
+            return;
         }
-    })
+    });
 }
+//call the game function
+game();
